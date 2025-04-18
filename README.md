@@ -14,6 +14,7 @@ docker run \
     -e YNAB_API_KEY=${YNAB_API_KEY} \
     -e PYTHONUNBUFFERED=1 \
     --restart=always \
+    --log-opt max-size=50m \
     -d \
     --name big-brother \
     big-brother:local;
