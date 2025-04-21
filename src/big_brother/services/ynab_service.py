@@ -1,4 +1,5 @@
 import os
+import uuid
 import ynab
 import ynab.models
 import ynab.models.account
@@ -43,8 +44,10 @@ def submit_transaction(
                     payee_name=transaction.payee,
                     amount=int(transaction.amount * 1000),
                     var_date=transaction.date,
-                    cleared="cleared",
+                    cleared="uncleared",
                     approved=False,
+                    # to make it look like a imported transaction
+                    import_id=str(uuid.uuid4()),
                 )
             ),
         )
