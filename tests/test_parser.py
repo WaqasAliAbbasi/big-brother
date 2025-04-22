@@ -23,3 +23,4 @@ def test_parser(test_case):
     transaction = parse_email(email)
     assert transaction.payee == test_case["expected"]["payee"]
     assert transaction.amount == test_case["expected"]["amount"]
+    assert transaction.account == test_case["expected"]["account"]
