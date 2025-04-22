@@ -100,12 +100,12 @@
   },
   {
     "subject": "iOS Wallet",
-    "body": "You spent HK$48.90 at 惠康 using Mox Card",
+    "body": "You spent $48.90 at Walmart using Mox Card",
     "date": "2025-04-22T13:42:55+00:00",
     "from_address": "waqasabbasi14@icloud.com",
     "expected": {
-      "payee": "惠康",
-      "amount": -48.9,
+      "payee": "Walmart",
+      "amount": -380.44,
       "account": "Mox"
     }
   }
