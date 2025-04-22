@@ -45,10 +45,12 @@ def parse_mox_email(email: EmailMessage) -> Transaction:
         if match:
             currency, amount, payee = processor(match)
             amount = float(amount.replace(",", ""))
+            converted = convert_currency_to_hkd(currency, amount)
             return Transaction(
                 date=email.date.date(),
                 payee=payee,
                 account="Mox",
-                amount=convert_currency_to_hkd(currency, amount),
+                amount=converted,
+                memo=f"Original: {currency} {amount}" if converted != amount else None,
             )
     raise ValueError("Couldn't extract a transaction")

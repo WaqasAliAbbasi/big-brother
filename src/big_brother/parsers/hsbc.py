@@ -29,10 +29,12 @@ def parse_hsbc_email(email: EmailMessage) -> Transaction:
             amount = float("-" + amount.replace(",", "").strip())
 
     if credit_card_number and merchant and amount:
+        converted = convert_currency_to_hkd(currency, amount)
         return Transaction(
             account="Visa Signature",
             payee=merchant,
             date=email.date.date(),
-            amount=convert_currency_to_hkd(currency, amount),
+            amount=converted,
+            memo=f"Original: {currency} {amount}" if converted != amount else None,
         )
     raise ValueError("Missing required fields in email")

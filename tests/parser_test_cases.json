@@ -89,7 +89,7 @@
   },
   {
     "subject": "iOS Wallet",
-    "body": "You spent HK$48.90 at 惠康 using Visa Signature",
+    "body": "You spent HK$48.90 at 惠康 using Visa Signature card",
     "date": "2025-04-22T13:42:55+00:00",
     "from_address": "waqasabbasi14@icloud.com",
     "expected": {
@@ -100,13 +100,14 @@
   },
   {
     "subject": "iOS Wallet",
-    "body": "You spent $48.90 at Walmart using Mox Card",
+    "body": "You spent $48.90 at Walmart using Mox Card card",
     "date": "2025-04-22T13:42:55+00:00",
     "from_address": "waqasabbasi14@icloud.com",
     "expected": {
       "payee": "Walmart",
       "amount": -380.44,
-      "account": "Mox"
+      "account": "Mox",
+      "memo": "Original: $ -48.9"
     }
   }
 ]

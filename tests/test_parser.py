@@ -24,3 +24,4 @@ def test_parser(test_case):
     assert transaction.payee == test_case["expected"]["payee"]
     assert transaction.amount == test_case["expected"]["amount"]
     assert transaction.account == test_case["expected"]["account"]
+    assert transaction.memo == test_case["expected"].get("memo")

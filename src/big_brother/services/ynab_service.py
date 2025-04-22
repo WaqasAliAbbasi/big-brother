@@ -42,6 +42,7 @@ def submit_transaction(
                 transaction=ynab.models.new_transaction.NewTransaction(
                     account_id=find_account_id(transaction),
                     payee_name=transaction.payee,
+                    memo=transaction.memo,
                     amount=int(transaction.amount * 1000),
                     var_date=transaction.date,
                     cleared="uncleared",
