@@ -109,5 +109,16 @@
       "account": "Mox",
       "memo": "Original: $ -48.9"
     }
+  },
+  {
+    "subject": "iOS Wallet",
+    "body": "You spent HK$123.00 at Digitalocean Eu B.v. using American Express Explorer(TM) Credit Card card",
+    "date": "2025-04-27T13:42:55+00:00",
+    "from_address": "waqasabbasi14@icloud.com",
+    "expected": {
+      "payee": "Digitalocean Eu B.v.",
+      "amount": -123.0,
+      "account": "American Express"
+    }
   }
 ]
