@@ -7,6 +7,7 @@ from email.header import decode_header
 from typing import Generator
 from dataclasses import dataclass
 from datetime import datetime
+from dateutil.parser import parse
 
 
 @dataclass
@@ -89,6 +90,7 @@ def monitor_emails(
                     # Get sender, date, and body
                     from_address = email.utils.parseaddr(email_message["From"])[1]
                     date = email_message.get("Date")
+                    parsed_date = parse(date)
                     body = _get_email_body(email_message)
 
                     yield (
@@ -97,7 +99,7 @@ def monitor_emails(
                             uid=str(uid),
                             subject=subject,
                             from_address=from_address,
-                            date=datetime.strptime(date, "%a, %d %b %Y %H:%M:%S %z"),
+                            date=parsed_date,
                             body=body,
                             body_lines=body.splitlines(),
                         ),
