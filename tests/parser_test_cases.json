@@ -33,6 +33,17 @@
     }
   },
   {
+    "subject": "Fw: Money transfer successful",
+    "from_address": "waqas.abbasi@outlook.com",
+    "date": "2025-04-18T14:07:22+00:00",
+    "body": "\r\n________________________________\r\nFrom: Mox <notify@mox.com>\r\nSent: Thursday, April 17, 2025 9:31 PM\r\nTo: waqas.abbasi@outlook.com <waqas.abbasi@outlook.com>\r\nSubject: Money transfer successful\r\n\r\n[Mox Logo]\r\n[Standard Chartered Logo]\r\nMoney transfer successful\r\n\r\n\ud83d\udcb8  You've transferred HKD18.00 to John successfully on 01 May 2025 09:02HKT.\r\n\r\nIf you did not authorise this transaction, please contact our Customer Care Team at (852) 2888 8228 immediately.\r\n\r\nIf you receive a suspicious email or phone call claiming to be from Mox, please contact our Customer Care Team at (852) 2888 8228 or forward the message to hoax@mox.com<mailto:hoax@mox.com>. Learn our security tips here<https://lzz857s8.r.ap-southeast-2.awstrack.me/L0/https:%2F%2Fmox.com%2Fstatic%2FSecurity-Tips.pdf/1/020800003rvahqjt-62rsujse-9vo0-39od-3fkt-6p88m7umipo0-000000/2LxbR5AteLS2frOnM-wTlMQVA6A=203>.\r\n\r\n\u00a9 Mox Bank Limited\r\n\r\nPrivacy Policy Statement <https://lzz857s8.r.ap-southeast-2.awstrack.me/L0/https:%2F%2Fmox.com%2Fstatic%2FPrivacy_Policy_Statement.pdf/1/020800003rvahqjt-62rsujse-9vo0-39od-3fkt-6p88m7umipo0-000000/iBA9ATI6g1N_6DtFt8ayBkYlED0=203>\r\n[Facebook]<https://lzz857s8.r.ap-southeast-2.awstrack.me/L0/https:%2F%2Fwww.facebook.com%2Fmoxbankhk/1/020800003rvahqjt-62rsujse-9vo0-39od-3fkt-6p88m7umipo0-000000/IX92esg8Bgp4EyekEc_mzxC6QIw=203>    [Instagram] <https://lzz857s8.r.ap-southeast-2.awstrack.me/L0/https:%2F%2Fwww.instagram.com%2Fmoxbank/1/020800003rvahqjt-62rsujse-9vo0-39od-3fkt-6p88m7umipo0-000000/ICjj5Sj7sd8W4Qy5e9vARN5xLFU=203>   [YouTube] <https://lzz857s8.r.ap-southeast-2.awstrack.me/L0/https:%2F%2Fwww.youtube.com%2Fchannel%2FUC41ce2iw3ytvBbJCwlF3iiw/1/020800003rvahqjt-62rsujse-9vo0-39od-3fkt-6p88m7umipo0-000000/qYl8yfNwhVMZu3j9jPYDdrRK1VM=203>    [LinkedIn] <https://lzz857s8.r.ap-southeast-2.awstrack.me/L0/https:%2F%2Fwww.linkedin.com%2Fcompany%2Fmox-bank/1/020800003rvahqjt-62rsujse-9vo0-39od-3fkt-6p88m7umipo0-000000/567l1J06yOZQHIhYmN6rFmxecJk=203>\r\n[https://lzz857s8.r.ap-southeast-2.awstrack.me/I0/020800003rvahqjt-62rsujse-9vo0-39od-3fkt-6p88m7umipo0-000000/FdidEMhssNPtjKrskqn564bNGgc=203]\r\n",
+    "expected": {
+      "payee": "John",
+      "amount": -18.0,
+      "account": "Mox"
+    }
+  },
+  {
     "subject": "Fw: Mox Card transaction successful",
     "from_address": "waqas.abbasi@outlook.com",
     "date": "2025-04-18T14:07:43+00:00",

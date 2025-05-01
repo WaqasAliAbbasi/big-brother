@@ -21,6 +21,10 @@ transaction_patterns = [
         lambda m: (m.group(1), "-" + m.group(2), m.group(3)),
     ),
     (
+        f".*You've transferred ({currency_regex})(.*) to (.*) successfully on .*",
+        lambda m: (m.group(1), "-" + m.group(2), m.group(3)),
+    ),
+    (
         f".*You've sent ({currency_regex})(.*) to (.*) successfully.*",
         lambda m: (m.group(1), "-" + m.group(2), m.group(3)),
     ),
