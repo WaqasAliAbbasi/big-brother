@@ -28,4 +28,5 @@ def parse_ios_wallet_email(email: EmailMessage) -> Transaction:
         account=get_account_name(account),
         amount=converted,
         memo=f"Original: {currency} {amount}" if converted != amount else None,
+        mark_as_import=False,
     )

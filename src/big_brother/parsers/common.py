@@ -10,6 +10,7 @@ class Transaction:
     account: str
     amount: float
     memo: Optional[str]
+    mark_as_import: bool = True
 
 
 currency_regex = "HKD|HK\$|USD|\$|JPY|¥|JP¥|GBP|£|CN¥|CNY"

@@ -48,7 +48,7 @@ def submit_transaction(
                     cleared="uncleared",
                     approved=False,
                     # to make it look like a imported transaction
-                    import_id=str(uuid.uuid4()),
+                    import_id=str(uuid.uuid4()) if transaction.mark_as_import else None,
                 )
             ),
         )
