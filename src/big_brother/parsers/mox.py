@@ -1,4 +1,5 @@
 import re
+import uuid
 from big_brother.services.mail import EmailMessage
 
 from big_brother.parsers.common import (
@@ -56,5 +57,6 @@ def parse_mox_email(email: EmailMessage) -> Transaction:
                 account="Mox",
                 amount=converted,
                 memo=f"Original: {currency} {amount}" if converted != amount else None,
+                import_id=str(uuid.uuid4()),
             )
     raise ValueError("Couldn't extract a transaction")

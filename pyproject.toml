@@ -8,7 +8,9 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
+    "httpx>=0.28.1",
     "pytest>=8.3.5",
+    "selenium>=4.31.0",
     "ynab>=1.4.0",
 ]
 

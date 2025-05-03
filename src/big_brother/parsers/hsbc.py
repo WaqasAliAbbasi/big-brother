@@ -1,4 +1,5 @@
 import re
+import uuid
 from big_brother.parsers.common import (
     Transaction,
     currency_regex,
@@ -36,5 +37,6 @@ def parse_hsbc_email(email: EmailMessage) -> Transaction:
             date=email.date.date(),
             amount=converted,
             memo=f"Original: {currency} {amount}" if converted != amount else None,
+            import_id=str(uuid.uuid4()),
         )
     raise ValueError("Missing required fields in email")

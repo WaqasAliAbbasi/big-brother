@@ -1,0 +1,23 @@
+version: '3'
+services:
+  selenium:
+    image: selenium/standalone-chrome:latest
+    ports:
+      - "4444:4444"
+      - "7900:7900"
+    shm_size: "2g"
+  big-brother:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SELENIUM_SERVER=http://selenium:4444
+    env_file:
+      - .env
+    restart: always
+    logging:
+      options:
+        max-size: 50m
+    depends_on:
+      - selenium

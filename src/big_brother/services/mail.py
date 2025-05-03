@@ -1,10 +1,10 @@
 import os
 import imaplib
-import time
 import socket
 import email
+import asyncio
 from email.header import decode_header
-from typing import Generator
+from typing import AsyncGenerator
 from dataclasses import dataclass
 from datetime import datetime
 from dateutil.parser import parse
@@ -54,9 +54,9 @@ def _get_email_body(msg):
     return ""
 
 
-def monitor_emails(
+async def monitor_emails(
     mail: imaplib.IMAP4_SSL = connect_to_mailbox(),
-) -> Generator[tuple[imaplib.IMAP4_SSL, EmailMessage], None, None]:
+) -> AsyncGenerator[tuple[imaplib.IMAP4_SSL, EmailMessage], None]:
     last_seen_uid = 0
     while True:
         try:
@@ -64,7 +64,7 @@ def monitor_emails(
             status, uids = mail.uid("SEARCH", None, "ALL")
             if status != "OK":
                 print("Error searching for messages.")
-                time.sleep(60)
+                await asyncio.sleep(60)
                 continue
 
             new_uids = [
@@ -108,16 +108,13 @@ def monitor_emails(
                     last_seen_uid = max(last_seen_uid, uid)
 
             refresh_interval = 30
-            print(f"Checking again in {refresh_interval} seconds.")
-            time.sleep(refresh_interval)
+            print(f"Checking again in {refresh_interval} seconds...")
+            await asyncio.sleep(refresh_interval)
 
         except (mail.abort, mail.error, socket.error) as e:
             print(f"Connection error: {e}. Attempting to reconnect in 60 seconds...")
-            time.sleep(60)
+            await asyncio.sleep(60)
             mail = connect_to_mailbox()
-            if mail is None:
-                print("Reconnection failed. Exiting.")
-                break
 
 
 def move_to_trash(mail: imaplib.IMAP4_SSL, uid: str) -> None:

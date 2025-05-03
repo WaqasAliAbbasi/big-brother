@@ -1,0 +1,194 @@
+import os
+import httpx
+import asyncio
+from datetime import date
+from dataclasses import dataclass
+from typing import Dict, Optional
+from selenium import webdriver
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+
+from big_brother.parsers.common import Transaction
+from big_brother.services.ynab_service import upsert_transactions
+
+
+server = os.getenv("SELENIUM_SERVER", "http://localhost:4444")
+username = os.getenv("AMEX_USERNAME")
+password = os.getenv("AMEX_PASSWORD")
+if not username or not password:
+    raise ValueError("AMEX_USERNAME and AMEX_PASSWORD must be set")
+
+accounts_url = "https://global.americanexpress.com/api/servicing/v1/member"
+transactions_url = (
+    "https://global.americanexpress.com/api/servicing/v1/financials/transactions"
+)
+
+
+@dataclass
+class AmexAccount:
+    account_token: str
+    account_key: str
+
+
+@dataclass
+class AmexForeignDetails:
+    amount: float
+    iso_alpha_currency_code: str
+    exchange_rate: float
+
+
+@dataclass
+class AmexTransaction:
+    reference_id: str
+    merchant_name: str
+    # positive if expense, negative if income
+    amount: float
+    # Debit if expense, Credit if income
+    type: str
+    post_date: Optional[str]
+    charge_date: str
+    status: str
+    foreign_details: Optional[AmexForeignDetails]
+
+
+def get_amex_cookies() -> Dict[str, str]:
+    options = webdriver.ChromeOptions()
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-setuid-sandbox")
+    options.add_argument("--start-maximized")
+    options.add_argument(
+        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36 Edg/119.0.0.0"
+    )
+    options.add_argument("--disable-blink-features=AutomationControlled")
+    options.add_experimental_option("excludeSwitches", ["enable-automation"])
+    driver = webdriver.Remote(command_executor=server, options=options)
+    try:
+        driver.get(
+            "https://www.americanexpress.com/en-us/account/login/?inav=iNavLnkLog"
+        )
+
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, "eliloUserID"))
+        )
+        driver.find_element(By.ID, "eliloUserID").send_keys(username)
+        driver.find_element(By.ID, "eliloPassword").send_keys(password)
+
+        driver.find_element(By.ID, "loginSubmit").click()
+
+        WebDriverWait(driver, 30).until(
+            EC.url_contains("global.americanexpress.com/dashboard")
+        )
+        cookies = {cookie["name"]: cookie["value"] for cookie in driver.get_cookies()}
+    finally:
+        driver.quit()
+    return cookies
+
+
+def get_amex_accounts(cookies: Dict[str, str]):
+    response = httpx.get(accounts_url, cookies=cookies)
+    response.raise_for_status()
+    return [
+        AmexAccount(account["account_token"], account["account_key"])
+        for account in response.json()["accounts"]
+    ]
+
+
+def parse_date(date_str: Optional[str]) -> Optional[date]:
+    if date_str is None:
+        return None
+    return date.fromisoformat(date_str)
+
+
+async def get_amex_transactions(
+    cookies: Dict[str, str], account: AmexAccount, status: str, limit: int = 100
+):
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                transactions_url,
+                cookies=cookies,
+                headers={
+                    "account_token": account.account_token,
+                },
+                params={
+                    "status": status,
+                    "limit": limit,
+                },
+            )
+            response.raise_for_status()
+            return [
+                AmexTransaction(
+                    transaction["reference_id"],
+                    transaction["extended_details"]["merchant"]["name"],
+                    transaction["amount"],
+                    transaction["type"],
+                    parse_date(transaction.get("post_date")),
+                    parse_date(transaction["charge_date"]),
+                    status,
+                    AmexForeignDetails(
+                        transaction["foreign_details"]["amount"],
+                        transaction["foreign_details"]["iso_alpha_currency_code"],
+                        transaction["foreign_details"]["exchange_rate"],
+                    )
+                    if transaction.get("foreign_details")
+                    else None,
+                )
+                for transaction in response.json()["transactions"]
+            ]
+    except Exception as e:
+        print(f"Error: {e}")
+        return []
+
+
+def convert_to_big_brother_transaction(transaction: AmexTransaction) -> Transaction:
+    return Transaction(
+        date=transaction.charge_date,
+        amount=-1 * transaction.amount,
+        payee=transaction.merchant_name,
+        memo=f"{transaction.foreign_details.iso_alpha_currency_code} {transaction.foreign_details.amount}"
+        if transaction.foreign_details
+        else None,
+        account="American Express",
+        import_id=f"bb-v1-{transaction.reference_id}",
+        status="uncleared" if transaction.status == "pending" else "cleared",
+    )
+
+
+async def get_all_transactions() -> list[Transaction]:
+    cookies = get_amex_cookies()
+    accounts = get_amex_accounts(cookies)
+    if len(accounts) == 0:
+        raise ValueError("No accounts found")
+    account = accounts[0]
+    posted_transactions, pending_transactions = await asyncio.gather(
+        get_amex_transactions(cookies, account, "posted"),
+        get_amex_transactions(cookies, account, "pending"),
+    )
+    all_transactions = sorted(
+        posted_transactions + pending_transactions,
+        key=lambda x: x.charge_date,
+        reverse=True,
+    )
+    return all_transactions
+
+
+async def monitor_amex():
+    while True:
+        try:
+            print("Checking for AMEX transactions...")
+            all_transactions = await get_all_transactions()
+            converted = [
+                convert_to_big_brother_transaction(transaction)
+                for transaction in all_transactions
+            ]
+            upsert_transactions(converted)
+        except Exception as e:
+            print(f"Error: {e}")
+        # Check every hour
+        await asyncio.sleep(1 * 60 * 60)
+
+
+if __name__ == "__main__":
+    asyncio.run(monitor_amex())
