@@ -108,7 +108,7 @@ async def monitor_emails(
                     last_seen_uid = max(last_seen_uid, uid)
 
             refresh_interval = 30
-            print(f"Checking again in {refresh_interval} seconds...")
+            print(f"Checking emails again in {refresh_interval} seconds...")
             await asyncio.sleep(refresh_interval)
 
         except (mail.abort, mail.error, socket.error) as e:

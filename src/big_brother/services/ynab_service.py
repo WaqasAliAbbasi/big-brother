@@ -108,17 +108,23 @@ def upsert_transactions(transactions: list[Transaction]):
         for transaction in transactions
         if transaction.import_id not in ynab_transactions_by_import_id
     ]
+    print(f"{len(to_be_created_transactions)} transactions to be created...")
     if to_be_created_transactions:
-        print(f"Creating {len(to_be_created_transactions)} new transactions...")
         create_transactions(to_be_created_transactions)
 
     to_be_updated_transactions = [
         transaction
         for transaction in transactions
         if transaction.import_id in ynab_transactions_by_import_id
+        and (
+            transaction.status
+            != ynab_transactions_by_import_id[transaction.import_id].cleared
+            or int(transaction.amount * 1000)
+            != ynab_transactions_by_import_id[transaction.import_id].amount
+        )
     ]
+    print(f"{len(to_be_updated_transactions)} transactions to be updated...")
     if to_be_updated_transactions:
-        print(f"Updating {len(to_be_updated_transactions)} transactions...")
         update_transactions(to_be_updated_transactions)
 
 

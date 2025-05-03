@@ -6,6 +6,8 @@ services:
       - "4444:4444"
       - "7900:7900"
     shm_size: "2g"
+    logging:
+      driver: none
   big-brother:
     build:
       context: .
