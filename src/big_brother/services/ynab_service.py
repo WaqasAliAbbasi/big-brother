@@ -132,3 +132,11 @@ if __name__ == "__main__":
     accounts = get_accounts()
     for account in accounts:
         print(f"Account ID: {account.id}, Name: {account.name}")
+
+    amex = find_account_id("American Express")
+    transactions = get_transactions(date(2025, 1, 1))
+    amex_transactions = [
+        transaction for transaction in transactions if transaction.account_id == amex
+    ]
+    for transaction in amex_transactions:
+        print(transaction)

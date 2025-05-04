@@ -40,14 +40,13 @@ class AmexForeignDetails:
 
 @dataclass
 class AmexTransaction:
-    reference_id: str
     merchant_name: str
     # positive if expense, negative if income
     amount: float
     # Debit if expense, Credit if income
     type: str
-    post_date: Optional[str]
-    charge_date: str
+    post_date: Optional[date]
+    charge_date: date
     status: str
     foreign_details: Optional[AmexForeignDetails]
 
@@ -118,9 +117,9 @@ async def get_amex_transactions(
                 },
             )
             response.raise_for_status()
+            transactions = response.json()["transactions"]
             return [
                 AmexTransaction(
-                    transaction["reference_id"],
                     transaction["extended_details"]["merchant"]["name"],
                     transaction["amount"],
                     transaction["type"],
@@ -135,11 +134,27 @@ async def get_amex_transactions(
                     if transaction.get("foreign_details")
                     else None,
                 )
-                for transaction in response.json()["transactions"]
+                for transaction in transactions
             ]
     except Exception as e:
         print(f"Error: {e}")
         return []
+
+
+# Max 36 characters
+def create_import_id(transaction: AmexTransaction) -> str:
+    sanitized_merchant_name = "".join(
+        filter(lambda c: c.isalnum(), transaction.merchant_name.lower())
+    )
+    # 3 + 1 + 10 + 1 + 10 + 1 = 26 (without the amount)
+    return ":".join(
+        [
+            "bb1",
+            transaction.charge_date.isoformat(),
+            sanitized_merchant_name[:10],
+            str(-1 * transaction.amount),
+        ]
+    )[:36]
 
 
 def convert_to_big_brother_transaction(transaction: AmexTransaction) -> Transaction:
@@ -151,7 +166,7 @@ def convert_to_big_brother_transaction(transaction: AmexTransaction) -> Transact
         if transaction.foreign_details
         else None,
         account="American Express",
-        import_id=f"bb-v1-{transaction.reference_id}",
+        import_id=create_import_id(transaction),
         status="uncleared" if transaction.status == "pending" else "cleared",
     )
 
