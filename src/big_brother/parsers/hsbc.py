@@ -40,3 +40,7 @@ def parse_hsbc_email(email: EmailMessage) -> Transaction:
             import_id=str(uuid.uuid4()),
         )
     raise ValueError("Missing required fields in email")
+
+
+def is_hsbc_email(email: EmailMessage) -> bool:
+    return "HSBC Credit Card Transaction Notification" in email.subject

@@ -44,6 +44,10 @@ transaction_patterns = [
 ]
 
 
+def is_mox_email(email: EmailMessage) -> bool:
+    return "notify@mox.com" in email.body and "unsuccessful" not in email.subject
+
+
 def parse_mox_email(email: EmailMessage) -> Transaction:
     for pattern, processor in transaction_patterns:
         match = re.match(pattern, email.body, re.DOTALL)

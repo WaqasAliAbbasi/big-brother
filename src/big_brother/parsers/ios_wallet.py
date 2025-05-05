@@ -30,3 +30,7 @@ def parse_ios_wallet_email(email: EmailMessage) -> Transaction:
         memo=f"Original: {currency} {amount}" if converted != amount else None,
         import_id=None,
     )
+
+
+def is_wallet_email(email: EmailMessage) -> bool:
+    return "iOS Wallet" in email.subject
