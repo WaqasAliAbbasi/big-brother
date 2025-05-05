@@ -1,3 +1,4 @@
+import collections
 import os
 import httpx
 import asyncio
@@ -10,7 +11,12 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
 from big_brother.parsers.common import Transaction
-from big_brother.services.ynab_service import upsert_transactions
+from big_brother.services.ynab_service import (
+    convert_to_ynab_amount,
+    create_transactions,
+    get_ynab_transactions,
+    find_account_id,
+)
 
 
 server = os.getenv("SELENIUM_SERVER", "http://localhost:4444")
@@ -40,6 +46,7 @@ class AmexForeignDetails:
 
 @dataclass
 class AmexTransaction:
+    reference_id: str
     merchant_name: str
     # positive if expense, negative if income
     amount: float
@@ -120,6 +127,7 @@ async def get_amex_transactions(
             transactions = response.json()["transactions"]
             return [
                 AmexTransaction(
+                    transaction["reference_id"],
                     transaction["extended_details"]["merchant"]["name"],
                     transaction["amount"],
                     transaction["type"],
@@ -141,22 +149,6 @@ async def get_amex_transactions(
         return []
 
 
-# Max 36 characters
-def create_import_id(transaction: AmexTransaction) -> str:
-    sanitized_merchant_name = "".join(
-        filter(lambda c: c.isalnum(), transaction.merchant_name.lower())
-    )
-    # 3 + 1 + 10 + 1 + 10 + 1 = 26 (without the amount)
-    return ":".join(
-        [
-            "bb1",
-            transaction.charge_date.isoformat(),
-            sanitized_merchant_name[:10],
-            str(-1 * transaction.amount),
-        ]
-    )[:36]
-
-
 def convert_to_big_brother_transaction(transaction: AmexTransaction) -> Transaction:
     return Transaction(
         date=transaction.charge_date,
@@ -166,39 +158,80 @@ def convert_to_big_brother_transaction(transaction: AmexTransaction) -> Transact
         if transaction.foreign_details
         else None,
         account="American Express",
-        import_id=create_import_id(transaction),
+        # this will ensure transactions get matched when posted transactions are eventually created
+        import_id=f"bb-v2-{transaction.reference_id}"
+        if transaction.status == "posted"
+        else None,
         status="uncleared" if transaction.status == "pending" else "cleared",
     )
 
 
-async def get_all_transactions() -> list[Transaction]:
+async def get_account_and_cookies() -> tuple[AmexAccount, Dict[str, str]]:
     cookies = get_amex_cookies()
     accounts = get_amex_accounts(cookies)
     if len(accounts) == 0:
         raise ValueError("No accounts found")
-    account = accounts[0]
-    posted_transactions, pending_transactions = await asyncio.gather(
-        get_amex_transactions(cookies, account, "posted"),
-        get_amex_transactions(cookies, account, "pending"),
+    return accounts[0], cookies
+
+
+async def update_posted_transactions(account: AmexAccount, cookies: Dict[str, str]):
+    posted = [
+        convert_to_big_brother_transaction(transaction)
+        for transaction in await get_amex_transactions(cookies, account, "posted")
+    ]
+    min_date = min(transaction.date for transaction in posted)
+    ynab_transactions_import_ids = {
+        transaction.import_id
+        for transaction in get_ynab_transactions(min_date)
+        if transaction.cleared == "cleared"
+    }
+    to_be_created_transactions = [
+        transaction
+        for transaction in posted
+        if transaction.import_id not in ynab_transactions_import_ids
+    ]
+    print(f"Creating {len(to_be_created_transactions)} posted transactions in ynab")
+    create_transactions(to_be_created_transactions)
+
+
+async def update_pending_transactions(account: AmexAccount, cookies: Dict[str, str]):
+    pending = [
+        convert_to_big_brother_transaction(transaction)
+        for transaction in await get_amex_transactions(cookies, account, "pending")
+    ]
+    min_date = min(transaction.date for transaction in pending)
+    ynab_uncleared_transactions = [
+        transaction
+        for transaction in get_ynab_transactions(min_date)
+        if transaction.cleared == "uncleared"
+    ]
+    frequency_of_transactions = collections.Counter(
+        (transaction.account_id, transaction.var_date, transaction.amount)
+        for transaction in ynab_uncleared_transactions
     )
-    all_transactions = sorted(
-        posted_transactions + pending_transactions,
-        key=lambda x: x.charge_date,
-        reverse=True,
-    )
-    return all_transactions
+    to_be_created_transactions = []
+    # this ensures that we don't create duplicate transactions every hour
+    for transaction in pending:
+        unique_identifier = (
+            find_account_id(transaction.account),
+            transaction.date,
+            convert_to_ynab_amount(transaction),
+        )
+        if frequency_of_transactions[unique_identifier] > 0:
+            frequency_of_transactions[unique_identifier] -= 1
+        else:
+            to_be_created_transactions.append(transaction)
+    print(f"Creating {len(to_be_created_transactions)} pending transactions in ynab")
+    create_transactions(to_be_created_transactions)
 
 
 async def monitor_amex():
     while True:
         try:
             print("Checking for AMEX transactions...")
-            all_transactions = await get_all_transactions()
-            converted = [
-                convert_to_big_brother_transaction(transaction)
-                for transaction in all_transactions
-            ]
-            upsert_transactions(converted)
+            account, cookies = await get_account_and_cookies()
+            await update_posted_transactions(account, cookies)
+            await update_pending_transactions(account, cookies)
         except Exception as e:
             print(f"Error: {e}")
         # Check every hour

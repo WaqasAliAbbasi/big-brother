@@ -1,7 +1,9 @@
 import os
 import ynab
 import ynab.api
+import ynab.api.accounts_api
 import ynab.api.transactions_api
+import ynab.api.user_api
 import ynab.models
 import ynab.models.account
 import ynab.models.new_transaction
@@ -28,7 +30,7 @@ def get_accounts() -> list[ynab.models.account.Account]:
         return accounts_response.data.accounts
 
 
-def get_transactions(
+def get_ynab_transactions(
     since_date: Optional[date] = None,
 ) -> list[ynab.models.transaction_detail.TransactionDetail]:
     with ynab.ApiClient(configuration) as api_client:
@@ -48,6 +50,10 @@ def find_account_id(account_name: str) -> str:
     raise ValueError(f"Account {account_name} not found in YNAB.")
 
 
+def convert_to_ynab_amount(transaction: Transaction) -> int:
+    return int(transaction.amount * 1000)
+
+
 def create_transactions(
     transactions: list[Transaction],
 ) -> list[ynab.models.transaction_detail.TransactionDetail]:
@@ -63,7 +69,7 @@ def create_transactions(
                         account_id=find_account_id(transaction.account),
                         payee_name=transaction.payee,
                         memo=transaction.memo,
-                        amount=int(transaction.amount * 1000),
+                        amount=convert_to_ynab_amount(transaction),
                         var_date=transaction.date,
                         cleared=transaction.status,
                         import_id=transaction.import_id,
@@ -75,68 +81,7 @@ def create_transactions(
         return transaction_response.data.transactions
 
 
-def update_transactions(transactions: list[Transaction]):
-    if not transactions:
-        return []
-    with ynab.ApiClient(configuration) as api_client:
-        transactions_api = ynab.TransactionsApi(api_client)
-        transactions_api.update_transactions(
-            budget_id="last-used",
-            data=ynab.models.patch_transactions_wrapper.PatchTransactionsWrapper(
-                transactions=[
-                    ynab.models.save_transaction_with_id_or_import_id.SaveTransactionWithIdOrImportId(
-                        import_id=transaction.import_id,
-                        account_id=find_account_id(transaction.account),
-                        amount=int(transaction.amount * 1000),
-                        cleared=transaction.status,
-                    )
-                    for transaction in transactions
-                ]
-            ),
-        )
-
-
-def upsert_transactions(transactions: list[Transaction]):
-    earliest_date = min(transaction.date for transaction in transactions)
-    ynab_transactions = get_transactions(earliest_date)
-    ynab_transactions_by_import_id = {
-        transaction.import_id: transaction for transaction in ynab_transactions
-    }
-
-    to_be_created_transactions = [
-        transaction
-        for transaction in transactions
-        if transaction.import_id not in ynab_transactions_by_import_id
-    ]
-    print(f"{len(to_be_created_transactions)} transactions to be created...")
-    if to_be_created_transactions:
-        create_transactions(to_be_created_transactions)
-
-    to_be_updated_transactions = [
-        transaction
-        for transaction in transactions
-        if transaction.import_id in ynab_transactions_by_import_id
-        and (
-            transaction.status
-            != ynab_transactions_by_import_id[transaction.import_id].cleared
-            or int(transaction.amount * 1000)
-            != ynab_transactions_by_import_id[transaction.import_id].amount
-        )
-    ]
-    print(f"{len(to_be_updated_transactions)} transactions to be updated...")
-    if to_be_updated_transactions:
-        update_transactions(to_be_updated_transactions)
-
-
 if __name__ == "__main__":
     accounts = get_accounts()
     for account in accounts:
         print(f"Account ID: {account.id}, Name: {account.name}")
-
-    amex = find_account_id("American Express")
-    transactions = get_transactions(date(2025, 1, 1))
-    amex_transactions = [
-        transaction for transaction in transactions if transaction.account_id == amex
-    ]
-    for transaction in amex_transactions:
-        print(transaction)
