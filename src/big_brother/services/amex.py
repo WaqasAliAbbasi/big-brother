@@ -17,6 +17,7 @@ from big_brother.services.ynab_service import (
     get_ynab_transactions,
     find_account_id,
 )
+from big_brother.services.mail import monitor_emails, move_to_trash
 
 
 server = os.getenv("SELENIUM_SERVER", "http://localhost:4444")
@@ -58,7 +59,7 @@ class AmexTransaction:
     foreign_details: Optional[AmexForeignDetails]
 
 
-def get_amex_cookies() -> Dict[str, str]:
+async def get_amex_cookies() -> Dict[str, str]:
     options = webdriver.ChromeOptions()
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-setuid-sandbox")
@@ -82,6 +83,35 @@ def get_amex_cookies() -> Dict[str, str]:
         driver.find_element(By.ID, "eliloPassword").send_keys(password)
 
         driver.find_element(By.ID, "loginSubmit").click()
+
+        # 2FA if enabled
+        try:
+            # Wait for the OTP channel selection to appear
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.NAME, "otp-channel"))
+            )
+
+            # Find and click the email label
+            email_label = driver.find_element(
+                By.CSS_SELECTOR, 'label[for^="channel_"][for*="@outlook.com"]'
+            )
+            email_label.click()
+
+            driver.find_element(By.CSS_SELECTOR, 'button[type="submit"]').click()
+
+            # Wait for the OTP input field
+            WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.ID, "question-input"))
+            )
+
+            otp = await get_otp()
+
+            driver.find_element(By.ID, "question-input").send_keys(otp)
+            driver.find_element(By.CSS_SELECTOR, 'button[type="submit"]').click()
+
+        except Exception as e:
+            print(f"Error during 2FA: {e}")
+            raise
 
         WebDriverWait(driver, 30).until(
             EC.url_contains("global.americanexpress.com/dashboard")
@@ -167,7 +197,7 @@ def convert_to_big_brother_transaction(transaction: AmexTransaction) -> Transact
 
 
 async def get_account_and_cookies() -> tuple[AmexAccount, Dict[str, str]]:
-    cookies = get_amex_cookies()
+    cookies = await get_amex_cookies()
     accounts = get_amex_accounts(cookies)
     if len(accounts) == 0:
         raise ValueError("No accounts found")
@@ -223,6 +253,23 @@ async def update_pending_transactions(account: AmexAccount, cookies: Dict[str, s
             to_be_created_transactions.append(transaction)
     print(f"Creating {len(to_be_created_transactions)} pending transactions in ynab")
     create_transactions(to_be_created_transactions)
+
+
+async def get_otp() -> str:
+    async for mail_client, email in monitor_emails(check_every_seconds=10):
+        if "Your American Express temporary security code" in email.subject:
+            # email.body = Your temporary security code is:\r\n\r\n770214
+            body_lines_not_empty = [line for line in email.body_lines if line.strip()]
+            otp = None
+            i = 0
+            while i < len(body_lines_not_empty):
+                line = body_lines_not_empty[i]
+                i += 1
+                if line == "Your temporary security code is:":
+                    break
+            otp = body_lines_not_empty[i]
+            move_to_trash(mail_client, email.uid)
+            return otp
 
 
 async def monitor_amex():

@@ -56,6 +56,7 @@ def _get_email_body(msg):
 
 async def monitor_emails(
     mail: imaplib.IMAP4_SSL = connect_to_mailbox(),
+    check_every_seconds: int = 30,
 ) -> AsyncGenerator[tuple[imaplib.IMAP4_SSL, EmailMessage], None]:
     last_seen_uid = 0
     while True:
@@ -107,9 +108,8 @@ async def monitor_emails(
 
                     last_seen_uid = max(last_seen_uid, uid)
 
-            refresh_interval = 30
-            print(f"Checking emails again in {refresh_interval} seconds...")
-            await asyncio.sleep(refresh_interval)
+            print(f"Checking emails again in {check_every_seconds} seconds...")
+            await asyncio.sleep(check_every_seconds)
 
         except (mail.abort, mail.error, socket.error) as e:
             print(f"Connection error: {e}. Attempting to reconnect in 60 seconds...")
