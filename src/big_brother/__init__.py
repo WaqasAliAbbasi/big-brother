@@ -2,7 +2,6 @@ import asyncio
 from big_brother.services.mail import monitor_emails, move_to_trash
 from big_brother.parsers.parse import parse_email
 from big_brother.services.ynab_service import create_transactions
-from big_brother.services.amex import monitor_amex
 
 
 async def start_email_monitor():
@@ -22,7 +21,6 @@ def main():
     async def run():
         await asyncio.gather(
             start_email_monitor(),
-            monitor_amex(),
         )
 
     asyncio.run(run())

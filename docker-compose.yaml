@@ -1,13 +1,4 @@
-version: '3'
 services:
-  selenium:
-    image: selenium/standalone-chrome:latest
-    ports:
-      - "4444:4444"
-      - "7900:7900"
-    shm_size: "2g"
-    logging:
-      driver: none
   big-brother:
     build:
       context: .
@@ -21,5 +12,3 @@ services:
     logging:
       options:
         max-size: 50m
-    depends_on:
-      - selenium
